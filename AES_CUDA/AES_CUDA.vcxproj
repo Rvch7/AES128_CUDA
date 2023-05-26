@@ -78,7 +78,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="AES_CUDA.cpp" />
+    <CudaCompile Include="AES_CUDA.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AES_CUDA.h" />

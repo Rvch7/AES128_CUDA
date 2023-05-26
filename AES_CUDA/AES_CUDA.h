@@ -14,7 +14,7 @@ const char Nr = 10; // Number of rounds
 
 struct word {
     BYTE byte[4];
-    word operator^(word x) {
+        word operator^(word x) {
         word z;
         z.byte[0] = x.byte[0] ^ this->byte[0];
         z.byte[1] = x.byte[1] ^ this->byte[1];
