@@ -79,15 +79,15 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="AES_CUDA.cu" />
-    <CudaCompile Include="GPU_AES.cu">
+    <CudaCompile Include="AES128_main.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </CudaCompile>
+    <CudaCompile Include="AES128_functions.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AES_CUDA.h" />
-    <ClInclude Include="CPU_AES.h" />
-    <ClInclude Include="GPU_AES.cuh" />
+    <ClInclude Include="AES128_main.h" />
     <ClInclude Include="key_expansion.h" />
   </ItemGroup>
   <ItemGroup>
@@ -95,7 +95,6 @@
     <Text Include="text.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CPU_AES.cpp" />
     <ClCompile Include="key_expansion.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

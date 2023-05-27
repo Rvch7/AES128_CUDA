@@ -2,10 +2,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <cmath>
-#include "AES_CUDA.h"
+#include "AES128_main.h"
 #include "key_expansion.h"
-#include "CPU_AES.h"
-#include "GPU_AES.cuh"
+
 
 
 __host__ __device__ BYTE xtimes(BYTE x) {
@@ -48,8 +47,8 @@ int main()
 
     key_expansion(key, (block_t*)expandedkeys);
 
-    gblock_t* d_textblocks;
-    gblock_t* d_expandedkeys;
+    block_t* d_textblocks;
+    block_t* d_expandedkeys;
     cudaMalloc(&d_textblocks,(sizeof(block_t)*NumofBlocks));
     cudaMalloc(&d_expandedkeys, (sizeof(block_t) * NUMOFKEYS));
 
@@ -59,7 +58,7 @@ int main()
     cudaMemcpy(d_expandedkeys, expandedkeys, (sizeof(block_t) * NUMOFKEYS), cudaMemcpyHostToDevice);
 
     cpu_cipher(textblocks, (block_t*)expandedkeys);
-    aes_kernal <<<1, 4 >>> (d_textblocks, d_expandedkeys); // A round key for single block --  later used for cuda
+    gpu_cipher <<<1, 4 >>> (d_textblocks, d_expandedkeys); // A round key for single block --  later used for cuda
     cudaMemcpy(textblocks, d_textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyDeviceToHost);
 
 
