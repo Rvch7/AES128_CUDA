@@ -135,8 +135,8 @@ __device__ void gpu_shift_rows(gblock_t* block) {  // Performs shift rows operat
 }
 
 __device__ void gpu_sbox_substitute(gblock_t* block) { //Performs an S-box substitution on a block
-    unsigned int i = threadIdx.x;
-    for (i; i < 16; i++) {
+    
+    for (int i = 0; i < 16; i++) {
         block->gstate->byte[i] = gSBOX[block->gstate->byte[i]];
     }
 }
@@ -146,16 +146,17 @@ __device__ void gpu_addroundkey(gblock_t* block, gblock_t* expandedkeys) {
 }
 
 __global__ void aes_kernal(gblock_t* block, gblock_t* expandedkeys) {
-    gpu_addroundkey(block, expandedkeys);
+    unsigned int i = threadIdx.x;
+    gpu_addroundkey((block+i), expandedkeys);
     for (int round=1; round < Nr; round++) {
-        gpu_sbox_substitute(block);
-        gpu_shift_rows(block);
-        gpu_mix_columns(block);
-        gpu_addroundkey(block, (expandedkeys + round));
+        gpu_sbox_substitute((block + i));
+        gpu_shift_rows((block + i));
+        gpu_mix_columns((block + i));
+        gpu_addroundkey((block + i), (expandedkeys + round));
     }
-    gpu_shift_rows(block);
-    gpu_mix_columns(block);
-    gpu_addroundkey(block, (expandedkeys + Nr));
+    gpu_sbox_substitute((block + i));
+    gpu_shift_rows((block + i));
+    gpu_addroundkey((block + i), (expandedkeys + Nr));
     
 }
 
@@ -187,7 +188,7 @@ int main()
         int ret = fscanf(pKeyFile, "%hhx", &key->state->byte[i]); //Read the private key in -  fscanf reads files and saves space sperated hex values to a local memory
     }
 
-    for (BYTE i = 0; i < 16; i++) {
+    for (BYTE i = 0; i < 32; i++) {
         int ret = fscanf(pInFile, "%hhx", &textblocks->state->byte[i]); //Read the private key in -  fscanf reads files and saves space sperated hex values to a local memory
     }
     //fread(textblocks, sizeof(BYTE), file_len, pInFile);
@@ -204,7 +205,7 @@ int main()
     cudaMemcpy(d_textblocks, textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyHostToDevice);
     cudaMemcpy(d_expandedkeys, expandedkeys, (sizeof(block_t) * NUMOFKEYS), cudaMemcpyHostToDevice);
 
-    aes_kernal <<<1, 1 >>> (d_textblocks, d_expandedkeys); // A round key for single block --  later used for cuda
+    aes_kernal <<<1, 4 >>> (d_textblocks, d_expandedkeys); // A round key for single block --  later used for cuda
     cudaMemcpy(textblocks, d_textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyDeviceToHost);
     
 
