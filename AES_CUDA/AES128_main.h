@@ -1,9 +1,16 @@
 #pragma once
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+
+#ifdef __CUDA_ARCH__
+#define CONSTANT __constant__ 
+#else
+#define CONSTANT const
+#endif
+
 // Definations
 typedef unsigned char BYTE;
-extern const BYTE SBOX[256];
+extern CONSTANT BYTE SBOX[256];
 
 #define BLOCKSIZE 16
 #define NUMOFKEYS 11
@@ -14,7 +21,7 @@ const char Nr = 10; // Number of rounds
 
 struct word {
     BYTE byte[4];
-        word operator^(word x) {
+    __host__ __device__ word operator^(word x) {
         word z;
         z.byte[0] = x.byte[0] ^ this->byte[0];
         z.byte[1] = x.byte[1] ^ this->byte[1];
@@ -26,7 +33,7 @@ struct word {
 
 struct block_t {
     word state[4] = {};
-    block_t operator^(block_t x) {
+    __host__ __device__ block_t operator^(block_t x) {
         block_t z;
         z.state[0] = x.state[0] ^ this->state[0];
         z.state[1] = x.state[1] ^ this->state[1];
@@ -37,3 +44,12 @@ struct block_t {
 };
 
 __host__ __device__ BYTE xtimes(BYTE x);
+__host__ __device__ void addroundkey(block_t* block, block_t* expandedkeys);
+__host__ __device__ void sbox_substitute(block_t* block);
+__host__ __device__ void shift_rows(block_t* block);
+__host__ __device__ void mix_columns(block_t* block);
+
+__global__ void gpu_cipher(block_t* block, block_t* expandedkeys);
+
+void cpu_cipher(block_t* block, block_t* expandedkeys);
+void cpu_cipher_text(block_t* text, block_t* expandedkeys, int NumberOfBlocks);
