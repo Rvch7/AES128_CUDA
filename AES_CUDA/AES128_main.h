@@ -1,9 +1,12 @@
 #pragma once
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include <nvml.h>
+#include <thread>
+#include <mutex>
 
 #ifdef __CUDA_ARCH__
-#define CONSTANT __constant__
+#define CONSTANT __constant__ 
 #else
 #define CONSTANT const
 #endif
@@ -48,8 +51,8 @@ __host__ __device__ void addroundkey(block_t* block, block_t* expandedkeys);
 __host__ __device__ void sbox_substitute(block_t* block);
 __host__ __device__ void shift_rows(block_t* block);
 __host__ __device__ void mix_columns(block_t* block);
-__global__ void gpu_cipher(block_t* block, block_t* expandedkeys);
 
+__global__ void gpu_cipher(block_t* block, block_t* expandedkeys);
 
 void cpu_cipher(block_t* block, block_t* expandedkeys);
 void cpu_cipher_text(block_t* text, block_t* expandedkeys, int NumberOfBlocks);
