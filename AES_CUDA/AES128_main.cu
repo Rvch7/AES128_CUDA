@@ -58,7 +58,7 @@ int main()
     cudaMemcpy(d_expandedkeys, expandedkeys, (sizeof(block_t) * NUMOFKEYS), cudaMemcpyHostToDevice);
 
     cpu_cipher(textblocks, (block_t*)expandedkeys);
-    gpu_cipher <<<1, 4 >>> (d_textblocks, d_expandedkeys); // A round key for single block --  later used for cuda
+    gpu_cipher <<<(NumofBlocks/512), 512 >>> (d_textblocks, d_expandedkeys); // A round key for single block --  later used for cuda
     cudaMemcpy(textblocks, d_textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyDeviceToHost);
 
 
