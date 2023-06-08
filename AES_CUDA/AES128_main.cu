@@ -2,91 +2,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <cmath>
-#include <thread>
-#include <mutex>
-#include <nvml.h>
+
 #include "AES128_main.h"
 #include "key_expansion.h"
-
-nvmlReturn_t nvmlResult;
-nvmlDevice_t device;
-nvmlReturn_t result;
-bool powerstate = 0;
-std::thread power_usage_thread;
-std::mutex startMutex;
-std::condition_variable startCondition;
-
-
-cudaEvent_t start, stop;
-
-
-
-void power_usage_gpu() {
-    unsigned int powerUsage = 0;
-    startCondition.notify_one();
-
-    // Get the power usage of the GPU
-    while (powerstate) {
-
-         result = nvmlDeviceGetPowerUsage(device, &powerUsage);
-        if (result != NVML_SUCCESS) {
-            printf("Failed to get power usage: %s\n", nvmlErrorString(result));
-            nvmlShutdown();
-            exit(0);
-        }
-
-        printf("Power Usage: %u mW\n", powerUsage);
-    }
-
-
-}
-
-void nvml_start() {
-    // Initialize NVML library
-    result = nvmlInit();
-    if (result != NVML_SUCCESS) {
-        printf("Failed to initialize NVML: %s\n", nvmlErrorString(result));
-        exit(0);
-    }
-
-    // since only one GPU is present, we'll use index 0
-    result = nvmlDeviceGetHandleByIndex(0, &device);
-    if (result != NVML_SUCCESS) {
-        printf("Failed to get device handle: %s\n", nvmlErrorString(result));
-        nvmlShutdown();
-        exit(0);
-    }
-    powerstate = 1;
-    power_usage_thread = std::thread(power_usage_gpu);
-    std::unique_lock<std::mutex> lock(startMutex);
-    startCondition.wait(lock);
-
-    
-}
-
-void nvml_stop() {
-    //powerstate = 0;
-    // Shutdown NVML library
-    if (power_usage_thread.joinable()) {
-        powerstate = 0;
-        power_usage_thread.join();
-    }
-    result = nvmlShutdown();
-    if (result != NVML_SUCCESS) {
-        printf("Failed to shutdown NVML: %s\n", nvmlErrorString(result));
-        exit(0);
-    }
-}
-
-
-
+#include "power_usage.h"
 
 int main()
 {
+    cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-    //std::thread power(power_usage_gpu);
-    //power_usage_gpu();
     cudaError_t ret;
     block_t* key = (block_t*)malloc(sizeof(block_t));                           // storage - key    
     if (key == NULL) { printf("error key allocation"); return -1; } 
@@ -103,7 +28,7 @@ int main()
 
 
     FILE* pInFile = fopen("./text.txt", "rb");                          
-    if (pKeyFile == NULL) { printf("error opening input file"); return -1; }
+    if (pInFile == NULL) { printf("error opening input file"); return -1; }
 
     // Find plain text file size
     fseek(pInFile, 0, SEEK_END);

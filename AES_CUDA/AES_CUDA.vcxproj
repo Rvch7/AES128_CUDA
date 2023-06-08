@@ -90,6 +90,7 @@
   <ItemGroup>
     <ClInclude Include="AES128_main.h" />
     <ClInclude Include="key_expansion.h" />
+    <ClInclude Include="power_usage.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="key.txt" />
@@ -97,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="key_expansion.cpp" />
+    <ClCompile Include="power_usage.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

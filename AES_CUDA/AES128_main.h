@@ -1,6 +1,9 @@
 #pragma once
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include <nvml.h>
+#include <thread>
+#include <mutex>
 
 #ifdef __CUDA_ARCH__
 #define CONSTANT __constant__ 
