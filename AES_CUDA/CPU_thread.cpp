@@ -3,7 +3,7 @@
 #include <thread>
 
 
-const int CPUnumThreads = 14;
+const int CPUnumThreads = 16;
 std::thread threads[CPUnumThreads];
 
 
