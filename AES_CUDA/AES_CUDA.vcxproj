@@ -89,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AES128_main.h" />
+    <ClInclude Include="CPU_thread.h" />
     <ClInclude Include="key_expansion.h" />
     <ClInclude Include="power_usage.h" />
   </ItemGroup>
@@ -97,6 +98,7 @@
     <Text Include="text.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CPU_thread.cpp" />
     <ClCompile Include="key_expansion.cpp" />
     <ClCompile Include="power_usage.cpp" />
   </ItemGroup>

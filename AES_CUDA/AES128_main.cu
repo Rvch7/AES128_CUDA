@@ -2,17 +2,20 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <cmath>
+#include <thread>
 
 #include "AES128_main.h"
 #include "key_expansion.h"
 #include "power_usage.h"
+#include "CPU_thread.h"
 
 int main()
 {
+
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-    cudaError_t ret;
+    //cudaError_t ret;
     block_t* key = (block_t*)malloc(sizeof(block_t));                           // storage - key    
     if (key == NULL) { printf("error key allocation"); return -1; } 
     word* expandedkeys = (word*)malloc(sizeof(word) * (Nb * (Nr + 1))); 
@@ -37,7 +40,7 @@ int main()
 
     // Find 16-byte blocks in plain text files
     int NumofBlocks = ceil(file_len / BLOCKSIZE);
-    int NumofThrds = 512;
+    //int NumofThrds = 512;
 
     //  host block allocations
     block_t* textblocks = (block_t*)calloc(NumofBlocks, sizeof(block_t));
@@ -57,41 +60,46 @@ int main()
     // key expansion to create a key for each round
     key_expansion(key, (block_t*)expandedkeys);
 
+    spawn_threads(textblocks, (block_t*)expandedkeys, NumofBlocks);
+
     // device blocks allocations
-    block_t* d_textblocks;
-    block_t* d_expandedkeys;
-    ret = cudaMalloc(&d_textblocks,(sizeof(block_t)*NumofBlocks));
-    if( ret != cudaSuccess) { printf("CUDA: error allocation d_textblocks"); return -1; }
-    ret =  cudaMalloc(&d_expandedkeys, (sizeof(block_t) * NUMOFKEYS));
-    if (ret != cudaSuccess) { printf("CUDA: error allocation d_expandedkeys"); return -1; }
+    //block_t* d_textblocks;
+    //block_t* d_expandedkeys;
+    //ret = cudaMalloc(&d_textblocks,(sizeof(block_t)*NumofBlocks));
+    //if( ret != cudaSuccess) { printf("CUDA: error allocation d_textblocks"); return -1; }
+    //ret =  cudaMalloc(&d_expandedkeys, (sizeof(block_t) * NUMOFKEYS));
+    //if (ret != cudaSuccess) { printf("CUDA: error allocation d_expandedkeys"); return -1; }
 
-    // send data: host to device
-    cudaMemcpy(d_textblocks, textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyHostToDevice);
-    if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_textblocks"); return -1; }
-    cudaMemcpy(d_expandedkeys, expandedkeys, (sizeof(block_t) * NUMOFKEYS), cudaMemcpyHostToDevice);
-    if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_expandedkeys"); return -1; }
+    //// send data: host to device
+    //cudaMemcpy(d_textblocks, textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyHostToDevice);
+    //if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_textblocks"); return -1; }
+    //cudaMemcpy(d_expandedkeys, expandedkeys, (sizeof(block_t) * NUMOFKEYS), cudaMemcpyHostToDevice);
+    //if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_expandedkeys"); return -1; }
 
-    //cpu_cipher(textblocks, (block_t*)expandedkeys);
-    // GPU cipher kernal 
-    nvml_start();
-    cudaEventRecord(start);
-    gpu_cipher <<<(NumofBlocks/NumofThrds), NumofThrds >>> (d_textblocks, d_expandedkeys); // A round key for single block --  later used for cuda
-    cudaDeviceSynchronize();
-    cudaEventRecord(stop);
-    nvml_stop();
+    ////cpu_cipher(textblocks, (block_t*)expandedkeys);
+    //// GPU cipher kernal 
+    //nvml_start();
+    //cudaEventRecord(start);
+    //gpu_cipher <<<(NumofBlocks/NumofThrds), NumofThrds >>> (d_textblocks, d_expandedkeys); // A round key for single block --  later used for cuda
+    //cudaDeviceSynchronize();
+    //cudaEventRecord(stop);
+    //nvml_stop();
 
-    cudaEventSynchronize(stop);
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-    printf("time elapsed: %f", milliseconds);
+    //cudaEventSynchronize(stop);
+    //float milliseconds = 0;
+    //cudaEventElapsedTime(&milliseconds, start, stop);
+    //printf("time elapsed: %f", milliseconds);
 
-    // send data: device to host
-    cudaMemcpy(textblocks, d_textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyDeviceToHost);
-    if (ret != cudaSuccess) { printf("CUDA: error copy DTOH textblocks"); return -1; }
+    //// send data: device to host
+    //cudaMemcpy(textblocks, d_textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyDeviceToHost);
+    //if (ret != cudaSuccess) { printf("CUDA: error copy DTOH textblocks"); return -1; }
 
-    cudaFree(d_expandedkeys);
-    cudaFree(d_textblocks);
+    //cudaFree(d_expandedkeys);
+    //cudaFree(d_textblocks);
 
-    
+    finish_all_threads();
+
+    free(textblocks);
+    free(expandedkeys);
 
 };

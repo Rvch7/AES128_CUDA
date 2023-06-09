@@ -103,7 +103,7 @@ void cpu_cipher(block_t* block, block_t* expandedkeys) {
 }
 
 void cpu_cipher_text(block_t* text, block_t* expandedkeys, int NumberOfBlocks) {
-    for (int i = 0; i <= NumberOfBlocks; i++) {
+    for (int i = 0; i < NumberOfBlocks; i++) {
         cpu_cipher((text + i), expandedkeys);
     }
 
