@@ -90,22 +90,56 @@ int main()
     ret = cudaMemcpy(d_expandedkeys, expandedkeys, (sizeof(block_t) * NUMOFKEYS), cudaMemcpyHostToDevice);
     if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_expandedkeys"); return -1; };
 
-    for (int i = 0; i < nStreams; ++i) {
+
+    /// <summary> V1 - src: https://developer.nvidia.com/blog/how-overlap-data-transfers-cuda-cc/
+    /// 2 streams - 150ms
+    /// 10 streams - 160 ms
+    /// no improvement from baseline - No streams
+    /// </summary>
+    /// <returns></returns>
+    /*for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
         ret = cudaMemcpyAsync((d_textblocks + offset), (textblocks + offset), (sizeof(block_t) * streamSize), cudaMemcpyHostToDevice, streams[i]);
         if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_textblocks"); return -1; };
         gpu_cipher<<<(NumofBlocks / (nStreams*NumofThrds)), NumofThrds,0,streams[i]>>> ((d_textblocks+offset), d_expandedkeys);
         //gpu_cipher<<<1, 70,0,streams[i]>>> ((d_textblocks+offset), d_expandedkeys);
         cudaMemcpyAsync((textblocks + offset), (d_textblocks + offset), (sizeof(block_t) * streamSize), cudaMemcpyDeviceToHost, streams[i]);
+    }*/
+
+    for (int i = 0; i < nStreams; ++i) {
+        int offset = i * streamSize;
+        ret = cudaMemcpyAsync((d_textblocks + offset), (textblocks + offset), (sizeof(block_t) * streamSize), cudaMemcpyHostToDevice, streams[i]);
+        if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_textblocks"); return -1; };
     }
+
+    for (int i = 0; i < nStreams; ++i) {
+        int offset = i * streamSize;
+        gpu_cipher <<<(NumofBlocks / (nStreams * NumofThrds)), NumofThrds, 0, streams[i] >>> ((d_textblocks + offset), d_expandedkeys);
+    }
+    for (int i = 0; i < nStreams; ++i) {
+        int offset = i * streamSize;
+        cudaMemcpyAsync((textblocks + offset), (d_textblocks + offset), (sizeof(block_t)* streamSize), cudaMemcpyDeviceToHost, streams[i]);
+    }
+
 
     /*
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
-        cudaMemcpyAsync(&d_a[offset], &a[offset], streamBytes, cudaMemcpyHostToDevice, stream[i]);
+        cudaMemcpyAsync(&d_a[offset], &a[offset],
+            streamBytes, cudaMemcpyHostToDevice, cudaMemcpyHostToDevice, stream[i]);
+    }
+
+    for (int i = 0; i < nStreams; ++i) {
+        int offset = i * streamSize;
         kernel << <streamSize / blockSize, blockSize, 0, stream[i] >> > (d_a, offset);
-        cudaMemcpyAsync(&a[offset], &d_a[offset], streamBytes, cudaMemcpyDeviceToHost, stream[i]);
+    }
+
+    for (int i = 0; i < nStreams; ++i) {
+        int offset = i * streamSize;
+        cudaMemcpyAsync(&a[offset], &d_a[offset],
+            streamBytes, cudaMemcpyDeviceToHost, cudaMemcpyDeviceToHost, stream[i]);
     }*/
+
 
     //// send data: host to device
     //cudaMemcpy(d_textblocks, textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyHostToDevice);
