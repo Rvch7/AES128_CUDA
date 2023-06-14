@@ -106,6 +106,8 @@ int main()
         cudaMemcpyAsync((textblocks + offset), (d_textblocks + offset), (sizeof(block_t) * streamSize), cudaMemcpyDeviceToHost, streams[i]);
     }*/
 
+    int cudaBlockSize = ceil((float) NumofBlocks / (nStreams * NumofThrds));
+
     nvml_start();
 
     for (int i = 0; i < nStreams; ++i) {
@@ -117,7 +119,7 @@ int main()
     cudaEventRecord(start);
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
-        gpu_cipher <<<(NumofBlocks / (nStreams * NumofThrds)), NumofThrds, 0, streams[i] >>> ((d_textblocks + offset), d_expandedkeys);
+        gpu_cipher <<<cudaBlockSize, NumofThrds, 0, streams[i] >>> ((d_textblocks + offset), d_expandedkeys);
     }
     cudaEventRecord(stop);
 
