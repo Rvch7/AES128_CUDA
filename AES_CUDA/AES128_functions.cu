@@ -75,16 +75,20 @@ __host__ __device__ void addroundkey(block_t* block, block_t* expandedkeys) {
 
 __global__ void gpu_cipher(block_t* block, block_t* expandedkeys) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    addroundkey((block + i), expandedkeys);
+    block_t l_block = block[i];
+
+    addroundkey(&l_block, expandedkeys);
     for (int round = 1; round < Nr; round++) {
-        sbox_substitute((block + i));
-        shift_rows((block + i));
-        mix_columns((block + i));
-        addroundkey((block + i), (expandedkeys + round));
+        sbox_substitute(&l_block);
+        shift_rows(&l_block);
+        mix_columns(&l_block);
+        addroundkey(&l_block, (expandedkeys + round));
     }
-    sbox_substitute((block + i));
-    shift_rows((block + i));
-    addroundkey((block + i),(expandedkeys + Nr));
+    sbox_substitute(&l_block);
+    shift_rows(&l_block);
+    addroundkey(&l_block,(expandedkeys + Nr));
+
+    block[i] = l_block;
 
 }
 

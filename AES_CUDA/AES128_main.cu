@@ -12,7 +12,7 @@ int main()
     cudaEvent_t start, stop;
     cudaError_t ret;
 
-    const unsigned int nStreams = 2;
+    const unsigned int nStreams = 10;
     cudaStream_t streams[nStreams];
 
     for (int i = 0; i < nStreams; ++i) {
@@ -106,39 +106,29 @@ int main()
         cudaMemcpyAsync((textblocks + offset), (d_textblocks + offset), (sizeof(block_t) * streamSize), cudaMemcpyDeviceToHost, streams[i]);
     }*/
 
+    nvml_start();
+
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
         ret = cudaMemcpyAsync((d_textblocks + offset), (textblocks + offset), (sizeof(block_t) * streamSize), cudaMemcpyHostToDevice, streams[i]);
         if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_textblocks"); return -1; };
     }
 
+    cudaEventRecord(start);
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
         gpu_cipher <<<(NumofBlocks / (nStreams * NumofThrds)), NumofThrds, 0, streams[i] >>> ((d_textblocks + offset), d_expandedkeys);
     }
+    cudaEventRecord(stop);
+
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
         cudaMemcpyAsync((textblocks + offset), (d_textblocks + offset), (sizeof(block_t)* streamSize), cudaMemcpyDeviceToHost, streams[i]);
     }
 
 
-    /*
-    for (int i = 0; i < nStreams; ++i) {
-        int offset = i * streamSize;
-        cudaMemcpyAsync(&d_a[offset], &a[offset],
-            streamBytes, cudaMemcpyHostToDevice, cudaMemcpyHostToDevice, stream[i]);
-    }
+    nvml_stop();
 
-    for (int i = 0; i < nStreams; ++i) {
-        int offset = i * streamSize;
-        kernel << <streamSize / blockSize, blockSize, 0, stream[i] >> > (d_a, offset);
-    }
-
-    for (int i = 0; i < nStreams; ++i) {
-        int offset = i * streamSize;
-        cudaMemcpyAsync(&a[offset], &d_a[offset],
-            streamBytes, cudaMemcpyDeviceToHost, cudaMemcpyDeviceToHost, stream[i]);
-    }*/
 
 
     //// send data: host to device
@@ -156,10 +146,10 @@ int main()
     //cudaEventRecord(stop);
     //nvml_stop();
 
-    //cudaEventSynchronize(stop);
-    //float milliseconds = 0;
-    //cudaEventElapsedTime(&milliseconds, start, stop);
-    //printf("time elapsed: %f", milliseconds);
+    cudaEventSynchronize(stop);
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    printf("time elapsed: %f", milliseconds);
 
     //// send data: device to host
     //cudaMemcpy(textblocks, d_textblocks, (sizeof(block_t) * NumofBlocks), cudaMemcpyDeviceToHost);
