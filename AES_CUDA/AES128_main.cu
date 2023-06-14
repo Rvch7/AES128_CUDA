@@ -59,6 +59,9 @@ int main()
     int NumofThrds = 512;
     int streamSize = NumofBlocks / nStreams;
 
+    int cpuLength = 0.07 * NumofBlocks;
+    int gpuLength = NumofBlocks - cpuLength;
+
     //  host block allocations
     block_t* textblocks = (block_t*)calloc(NumofBlocks, sizeof(block_t));
     if (textblocks == NULL) { printf("error allocation textblocks"); return -1; }
