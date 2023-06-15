@@ -35,7 +35,11 @@ struct word {
 };
 
 struct block_t {
-    word state[4] = {};
+    union {
+        word state[4] = {};
+        uint64_t state64[2];
+    };
+    //word state[4] = {};
     __host__ __device__ block_t operator^(block_t x) {
         block_t z;
         z.state[0] = x.state[0] ^ this->state[0];

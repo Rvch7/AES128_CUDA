@@ -80,7 +80,6 @@ int main()
 
 
 
-
     // device blocks allocations
     block_t* d_textblocks;
     block_t* d_expandedkeys;
@@ -118,12 +117,12 @@ int main()
         if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_textblocks"); return -1; };
     }
 
-    //cudaEventRecord(start);
+    cudaEventRecord(start);
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
         gpu_cipher <<<cudaBlockSize, NumofThrds, 0, streams[i] >>> ((d_textblocks + offset), d_expandedkeys);
     }
-    //cudaEventRecord(stop);
+    cudaEventRecord(stop);
 
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
