@@ -69,13 +69,20 @@ __host__ __device__ void sbox_substitute(block_t* block, BYTE* SBOX) { //Perform
     }
 }
 
-__host__ __device__ void addroundkey(block_t* block, block_t* expandedkeys) {
-    *block = *block ^ *expandedkeys;
+//__host__ __device__ void addroundkey(block_t* block, block_t* expandedkeys) {
+//    *block = *block ^ *expandedkeys;
+//}
 
-    //asm ("xor.b64 %0, %1, %2;"
-    //    : "=l"(*block)
-    //    : "l"(*block), "l" (*expandedkeys)
-    //    );
+__host__ __device__ void addroundkey(block_t* block, block_t* extendedkeys) {
+#ifdef __CUDA_ARCH__
+    asm("xor.b64 %0, %2, %3;\n\t"
+        "xor.b64 %1, %4, %5;"
+        : "=l"(block->state64[0]), "=l"(block->state64[1])
+        : "l"(block->state64[0]), "l" (extendedkeys->state64[0]), "l"(block->state64[1]), "l" (extendedkeys->state64[1])
+    );
+#else
+    * block = *block ^ *extendedkeys;
+#endif
 }
 
 __global__ void gpu_cipher(block_t* block, block_t* expandedkeys) {
@@ -86,12 +93,15 @@ __global__ void gpu_cipher(block_t* block, block_t* expandedkeys) {
 
     if (threadIdx.x == 0) {
         for (int i = 0; i < 256; i++) {
+            
             l_SBOX[i] = SBOX[i];
+
         }
          
     }
 
     __syncthreads();
+
     addroundkey(&l_block, expandedkeys);
     for (int round = 1; round < Nr; round++) {
         sbox_substitute(&l_block,l_SBOX);

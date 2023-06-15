@@ -80,7 +80,6 @@ int main()
 
 
 
-
     // device blocks allocations
     block_t* d_textblocks;
     block_t* d_expandedkeys;
