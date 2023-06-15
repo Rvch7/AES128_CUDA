@@ -48,7 +48,7 @@ struct block_t {
 
 __host__ __device__ BYTE xtimes(BYTE x);
 __host__ __device__ void addroundkey(block_t* block, block_t* expandedkeys);
-__host__ __device__ void sbox_substitute(block_t* block);
+__host__ __device__ void sbox_substitute(block_t* block, BYTE* SBOX);
 __host__ __device__ void shift_rows(block_t* block);
 __host__ __device__ void mix_columns(block_t* block);
 

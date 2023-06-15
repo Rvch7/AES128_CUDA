@@ -12,7 +12,7 @@ int main()
     cudaEvent_t start, stop;
     cudaError_t ret;
 
-    const unsigned int nStreams = 10;
+    const unsigned int nStreams = 2;
     cudaStream_t streams[nStreams];
 
     for (int i = 0; i < nStreams; ++i) {
@@ -25,11 +25,6 @@ int main()
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     
-    cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, 0);
-
-    int copyEngines = deviceProp.asyncEngineCount;
-
 
 
     block_t* key = (block_t*)malloc(sizeof(block_t));                           // storage - key    
@@ -56,11 +51,14 @@ int main()
 
     // Find 16-byte blocks in plain text files
     int NumofBlocks = ceil(file_len / BLOCKSIZE);
-    int NumofThrds = 512;
+    const int NumofThrds = 512;
+    //const float ratio = 0.07; // based on calulation of R for CPU and GPU
     int streamSize = NumofBlocks / nStreams;
 
-    int cpuLength = 0.07 * NumofBlocks;
-    int gpuLength = NumofBlocks - cpuLength;
+    //int cpuLength = ratio * NumofBlocks;
+    //int gpuLength = NumofBlocks - cpuLength;
+
+    //TO-DO  - ADDING CPU GPU
 
     //  host block allocations
     block_t* textblocks = (block_t*)calloc(NumofBlocks, sizeof(block_t));
@@ -111,7 +109,8 @@ int main()
 
     int cudaBlockSize = ceil((float) NumofBlocks / (nStreams * NumofThrds));
 
-    nvml_start();
+    //nvml_start();
+    //cudaEventRecord(start);
 
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
@@ -119,20 +118,20 @@ int main()
         if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_textblocks"); return -1; };
     }
 
-    cudaEventRecord(start);
+    //cudaEventRecord(start);
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
         gpu_cipher <<<cudaBlockSize, NumofThrds, 0, streams[i] >>> ((d_textblocks + offset), d_expandedkeys);
     }
-    cudaEventRecord(stop);
+    //cudaEventRecord(stop);
 
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
         cudaMemcpyAsync((textblocks + offset), (d_textblocks + offset), (sizeof(block_t)* streamSize), cudaMemcpyDeviceToHost, streams[i]);
     }
 
-
-    nvml_stop();
+    //cudaEventRecord(stop);
+    //nvml_stop();
 
 
 

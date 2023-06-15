@@ -1,6 +1,6 @@
 #include "AES128_main.h"
 
-CONSTANT BYTE SBOX[256] = {
+ CONSTANT BYTE SBOX[256] = {
  0x63 ,0x7c ,0x77 ,0x7b ,0xf2 ,0x6b ,0x6f ,0xc5 ,0x30 ,0x01 ,0x67 ,0x2b ,0xfe ,0xd7 ,0xab ,0x76
 ,0xca ,0x82 ,0xc9 ,0x7d ,0xfa ,0x59 ,0x47 ,0xf0 ,0xad ,0xd4 ,0xa2 ,0xaf ,0x9c ,0xa4 ,0x72 ,0xc0
 ,0xb7 ,0xfd ,0x93 ,0x26 ,0x36 ,0x3f ,0xf7 ,0xcc ,0x34 ,0xa5 ,0xe5 ,0xf1 ,0x71 ,0xd8 ,0x31 ,0x15
@@ -62,7 +62,7 @@ __host__ __device__ void shift_rows(block_t* block) {  // Performs shift rows op
     *block = out;
 }
 
-__host__ __device__ void sbox_substitute(block_t* block) { //Performs an S-box substitution on a block
+__host__ __device__ void sbox_substitute(block_t* block, BYTE* SBOX) { //Performs an S-box substitution on a block
 
     for (int i = 0; i < 16; i++) {
         block->state->byte[i] = SBOX[block->state->byte[i]];
@@ -71,20 +71,35 @@ __host__ __device__ void sbox_substitute(block_t* block) { //Performs an S-box s
 
 __host__ __device__ void addroundkey(block_t* block, block_t* expandedkeys) {
     *block = *block ^ *expandedkeys;
+
+    //asm ("xor.b64 %0, %1, %2;"
+    //    : "=l"(*block)
+    //    : "l"(*block), "l" (*expandedkeys)
+    //    );
 }
 
 __global__ void gpu_cipher(block_t* block, block_t* expandedkeys) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     block_t l_block = block[i];
 
+    __shared__ BYTE l_SBOX[256];
+
+    if (threadIdx.x == 0) {
+        for (int i = 0; i < 256; i++) {
+            l_SBOX[i] = SBOX[i];
+        }
+         
+    }
+
+    __syncthreads();
     addroundkey(&l_block, expandedkeys);
     for (int round = 1; round < Nr; round++) {
-        sbox_substitute(&l_block);
+        sbox_substitute(&l_block,l_SBOX);
         shift_rows(&l_block);
         mix_columns(&l_block);
         addroundkey(&l_block, (expandedkeys + round));
     }
-    sbox_substitute(&l_block);
+    sbox_substitute(&l_block, l_SBOX);
     shift_rows(&l_block);
     addroundkey(&l_block,(expandedkeys + Nr));
 
@@ -96,12 +111,12 @@ void cpu_cipher(block_t* block, block_t* expandedkeys) {
     addroundkey(block, expandedkeys);
 
     for (int round = 1; round < Nr; round++) {
-        sbox_substitute(block);
+        sbox_substitute(block, (BYTE*)SBOX);
         shift_rows(block);
         mix_columns(block);
         addroundkey(block, (expandedkeys + round));
     }
-    sbox_substitute(block);
+    sbox_substitute(block, (BYTE*)SBOX);
     shift_rows(block);
     addroundkey(block, (expandedkeys + Nr));
 }
