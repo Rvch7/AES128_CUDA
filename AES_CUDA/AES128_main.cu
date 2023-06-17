@@ -6,13 +6,14 @@
 #include "AES128_main.h"
 #include "key_expansion.h"
 #include "power_usage.h"
+#include "CPU_thread.h"
 
 int main()
 {
     cudaEvent_t start, stop;
     cudaError_t ret;
 
-    const unsigned int nStreams = 10;
+    const unsigned int nStreams = 2;
     cudaStream_t streams[nStreams];
 
     for (int i = 0; i < nStreams; ++i) {
@@ -52,11 +53,13 @@ int main()
     // Find 16-byte blocks in plain text files
     int NumofBlocks = ceil(file_len / BLOCKSIZE);
     const int NumofThrds = 512;
-    const float ratio = 0.07; // based on calulation of R for CPU and GPU
-    int streamSize = NumofBlocks / nStreams;
+    const float ratio = 0.05; // based on calulation of R for CPU and GPU
+    
 
     int cpuLength = ratio * NumofBlocks;
     int gpuLength = NumofBlocks - cpuLength;
+
+    int streamSize = gpuLength / nStreams;
 
     //TO-DO  - ADDING CPU GPU
 
@@ -85,7 +88,7 @@ int main()
     // device blocks allocations
     block_t* d_textblocks;
     block_t* d_expandedkeys;
-    ret = cudaMalloc(&d_textblocks,(sizeof(block_t)*NumofBlocks));
+    ret = cudaMalloc(&d_textblocks,(sizeof(block_t)* gpuLength));
     if( ret != cudaSuccess) { printf("CUDA: error allocation d_textblocks"); return -1; }
     ret =  cudaMalloc(&d_expandedkeys, (sizeof(block_t) * NUMOFKEYS));
     if (ret != cudaSuccess) { printf("CUDA: error allocation d_expandedkeys"); return -1; }
@@ -108,14 +111,16 @@ int main()
         cudaMemcpyAsync((textblocks + offset), (d_textblocks + offset), (sizeof(block_t) * streamSize), cudaMemcpyDeviceToHost, streams[i]);
     }*/
 
-    int cudaBlockSize = ceil((float) NumofBlocks / (nStreams * NumofThrds));
+    int cudaBlockSize = ceil((float) gpuLength / (nStreams * NumofThrds));
 
-    //nvml_start();
+    nvml_start();
     cudaEventRecord(start);
+
+    spawn_threads(textblocks, (block_t*)expandedkeys, cpuLength);
 
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
-        ret = cudaMemcpyAsync((d_textblocks + offset), (textblocks + offset), (sizeof(block_t) * streamSize), cudaMemcpyHostToDevice, streams[i]);
+        ret = cudaMemcpyAsync((d_textblocks + offset), (textblocks + cpuLength + offset), (sizeof(block_t) * streamSize), cudaMemcpyHostToDevice, streams[i]);
         if (ret != cudaSuccess) { printf("CUDA: error copy HTOD d_textblocks"); return -1; };
     }
 
@@ -124,15 +129,19 @@ int main()
         int offset = i * streamSize;
         gpu_cipher <<<cudaBlockSize, NumofThrds, 0, streams[i] >>> ((d_textblocks + offset), d_expandedkeys);
     }
+
+    
     //cudaEventRecord(stop);
 
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
-        cudaMemcpyAsync((textblocks + offset), (d_textblocks + offset), (sizeof(block_t)* streamSize), cudaMemcpyDeviceToHost, streams[i]);
+        cudaMemcpyAsync((textblocks + cpuLength + offset), (d_textblocks + offset), (sizeof(block_t)* streamSize), cudaMemcpyDeviceToHost, streams[i]);
     }
 
+    finish_all_threads();
+
     cudaEventRecord(stop);
-    //nvml_stop();
+    nvml_stop();
 
 
 
