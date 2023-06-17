@@ -70,7 +70,9 @@ __host__ __device__ void sbox_substitute(block_t* block, BYTE* SBOX) { //Perform
 }
 
 //__host__ __device__ void addroundkey(block_t* block, block_t* expandedkeys) {
-//    *block = *block ^ *expandedkeys;
+//    block->state64[0] ^= expandedkeys->state64[0];
+//    block->state64[1] ^= expandedkeys->state64[1];
+//    //*block = *block ^ *expandedkeys;
 //}
 
 __host__ __device__ void addroundkey(block_t* block, block_t* extendedkeys) {
