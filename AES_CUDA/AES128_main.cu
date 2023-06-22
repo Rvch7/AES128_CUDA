@@ -118,6 +118,8 @@ int main()
 
     spawn_threads(textblocks, (block_t*)expandedkeys, cpuLength);
 
+    spawn_threads(textblocks, (block_t*)expandedkeys, cpuLength);
+
     for (int i = 0; i < nStreams; ++i) {
         int offset = i * streamSize;
         ret = cudaMemcpyAsync((d_textblocks + offset), (textblocks + cpuLength + offset), (sizeof(block_t) * streamSize), cudaMemcpyHostToDevice, streams[i]);
